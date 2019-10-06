@@ -10,13 +10,17 @@ object KotlinBeanDeserializerModifier: BeanDeserializerModifier() {
             config: DeserializationConfig,
             beanDesc: BeanDescription,
             deserializer: JsonDeserializer<*>
-    ) = super.modifyDeserializer(config, beanDesc, deserializer)
-            .maybeSingletonDeserializer(objectSingletonInstance(beanDesc.beanClass))
-}
+    ): JsonDeserializer<out Any> {
+        val modifiedFromParent = super.modifyDeserializer(config, beanDesc, deserializer)
 
-fun JsonDeserializer<*>.maybeSingletonDeserializer(singleton: Any?) = when (singleton) {
-    null -> this
-    else -> this.asSingletonDeserializer(singleton)
+        val objectSingletonInstance = objectSingletonInstance(beanDesc.beanClass)
+
+        return if (objectSingletonInstance != null) {
+            KotlinObjectSingletonDeserializer(objectSingletonInstance, modifiedFromParent)
+        } else {
+            modifiedFromParent
+        }
+    }
 }
 
 private fun objectSingletonInstance(beanClass: Class<*>): Any? = if (!beanClass.isKotlinClass()) {
